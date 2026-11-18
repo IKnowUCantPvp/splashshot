@@ -1,0 +1,26 @@
+{
+  "configurations": [
+    {
+      "name": "UNO R4 WiFi",
+      "compilerPath": "${env:HOME}/Library/Arduino15/packages/arduino/tools/arm-none-eabi-gcc/7-2017q4/bin/arm-none-eabi-g++",
+      "compilerArgs": ["-mcpu=cortex-m4", "-mthumb", "-mfloat-abi=hard", "-mfpu=fpv4-sp-d16"],
+      "intelliSenseMode": "gcc-arm",
+      "cStandard": "gnu11",
+      "cppStandard": "gnu++17",
+      "forcedInclude": ["${env:HOME}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/cores/arduino/Arduino.h"],
+      "includePath": [
+        "${workspaceFolder}/tray",
+        "${env:HOME}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/cores/arduino/**",
+        "${env:HOME}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/variants/UNOWIFIR4/**",
+        "${env:HOME}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/libraries/**",
+        "${env:HOME}/Documents/Arduino/libraries/**"
+      ],
+      "defines": [
+        "F_CPU=48000000", "ARDUINO=10607", "ARDUINO_UNOR4_WIFI", "ARDUINO_UNOWIFIR4",
+        "ARDUINO_ARCH_RENESAS", "ARDUINO_ARCH_RENESAS_UNO", "ARDUINO_FSP",
+        "_RA_CORE=CM4", "_RENESAS_RA_", "NO_USB", "BACKTRACE_SUPPORT"
+      ]
+    }
+  ],
+  "version": 4
+}

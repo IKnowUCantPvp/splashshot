@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>SplashShot</title>
+<style>
+:root{
+  --pool:#ffffff; --deck:#f1f6f8; --lane:#d6e3e8; --text:#0b2230; --muted:#5a7480;
+  --water:#1593b8; --red:#ef3b3b; --green:#18b35f; --amber:#e89a17; --off:#cfdbe0;
+  --round: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --cup: min(25vw, 104px);
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--pool);color:var(--text);font:16px/1.4 var(--body);-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding:0 16px calc(84px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--water);outline-offset:3px;border-radius:12px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top)) 0 10px}
+.brand{font:800 22px/1 var(--round);letter-spacing:-.01em}
+.brand span{color:var(--water)}
+.conn{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);padding:6px 10px;border-radius:99px;background:var(--deck)}
+.conn i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.conn.live i{background:var(--green);box-shadow:0 0 8px var(--green)}
+.conn.off{color:#9b1c1c;background:#fde7e7}.conn.off i{background:var(--red)}
+.conn.demo i{background:var(--amber)}
+
+.banner{display:none;margin:4px 0 10px;padding:12px 14px;border-radius:14px;background:#fde7e7;color:#7a1717;font-size:14px}
+.banner.show{display:block}
+
+/* scoreboard */
+.score{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;padding:6px 0 2px;text-align:center}
+.score small{display:block;font:700 12px/1 var(--round);letter-spacing:.14em;color:var(--muted);margin-bottom:4px}
+.score b{font:800 64px/1 var(--round);font-variant-numeric:tabular-nums}
+.score .dash{font:800 36px/1 var(--round);color:var(--lane);padding-bottom:12px}
+.phase{text-align:center;color:var(--muted);font-size:14px;min-height:20px;margin-bottom:6px}
+.phase.won{color:var(--text);font:800 18px/1.2 var(--round)}
+
+/* the tray */
+.tray{position:relative;margin:4px auto 6px;padding:22px 0 26px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.tray .side{font:700 11px/1 var(--round);letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.row{display:flex;gap:calc(var(--cup) * .14)}
+.cup{position:relative;width:var(--cup);height:var(--cup);border-radius:50%;display:grid;place-items:center;-webkit-tap-highlight-color:transparent}
+.cup .well{width:74%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;align-content:center;gap:1px;
+  background:radial-gradient(circle at 35% 30%,#e3f6fb,#bfe6f1 75%);box-shadow:inset 0 0 0 2px #93cfe0}
+.cup .n{font:800 calc(var(--cup) * .26)/1 var(--round)}
+.cup .g{font:600 calc(var(--cup) * .105)/1 var(--mono);color:#2f6476;font-variant-numeric:tabular-nums}
+.led{position:absolute;left:50%;top:50%;width:calc(var(--cup) * .095);height:calc(var(--cup) * .095);margin:calc(var(--cup) * -.0475);
+  border-radius:50%;background:var(--off);transform:rotate(calc(var(--k) * 45deg)) translateY(calc(var(--cup) * -.445))}
+.cup.standing .led{background:var(--red);box-shadow:0 0 calc(var(--cup) * .09) var(--red)}
+.cup.hit .led{background:var(--green);box-shadow:0 0 calc(var(--cup) * .09) var(--green)}
+.cup.hit .well{background:radial-gradient(circle at 35% 30%,#e4f8ec,#bdebd0 75%);box-shadow:inset 0 0 0 2px #7fd3a4}
+.cup.lifted .led{background:var(--amber);animation:blink 1s steps(2) infinite}
+.cup.lifted .well{background:none;box-shadow:none;outline:2px dashed #e0a63c;outline-offset:-2px}
+.cup.nosensor .well{background:none;box-shadow:none;outline:2px dashed var(--lane);outline-offset:-2px}
+.cup.nosensor .n{color:#a9bcc4}
+.cup.zeroing .led{background:var(--water);animation:blink .5s steps(2) infinite}
+.cup.fresh .led{animation:chase .8s linear infinite;animation-delay:calc(var(--k) * -.1s)}
+.cup.splash::after{content:"";position:absolute;inset:8%;border-radius:50%;border:3px solid var(--green);animation:ripple .9s ease-out forwards;pointer-events:none}
+@keyframes blink{50%{opacity:.25}}
+@keyframes chase{0%,60%{opacity:1}80%{opacity:.15}}
+@keyframes ripple{from{transform:scale(.7);opacity:1}to{transform:scale(1.6);opacity:0}}
+
+/* controls */
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 18px}
+.btn{min-height:52px;padding:0 16px;border-radius:16px;background:var(--deck);font-weight:650;font-size:16px;box-shadow:inset 0 0 0 1px var(--lane)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--water);color:#fff;box-shadow:none}
+.btn.wide{grid-column:1 / -1}
+.btn.armed{background:var(--amber);color:#2b1a00;box-shadow:none}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.scored{display:grid;grid-template-columns:1fr auto;gap:10px;grid-column:1 / -1}
+.scored .btn:first-child{background:#e6f7ee;color:#0d5a33;box-shadow:inset 0 0 0 1px #8fd8b0;font:800 18px/1 var(--round)}
+
+/* cards */
+.card{background:var(--deck);border-radius:20px;padding:16px;margin-bottom:12px}
+.card h2{font:800 15px/1.2 var(--round);margin-bottom:10px}
+.card p.note{color:var(--muted);font-size:13.5px;margin-top:8px}
+.seg{display:flex;background:var(--pool);border-radius:12px;padding:3px;gap:2px}
+.seg button{flex:1;min-height:40px;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--muted);padding:0 2px}
+.seg button[aria-pressed=true]{background:var(--text);color:#fff}
+.label{font-size:13px;color:var(--muted);margin:14px 0 6px}
+.label:first-of-type{margin-top:0}
+.robotline{display:flex;gap:8px;align-items:center;margin-top:14px;font-size:13.5px;color:var(--muted)}
+.robotline i{width:8px;height:8px;border-radius:50%;background:var(--off);flex:none}
+
+.feed{list-style:none;padding:0;font-size:14px}
+.feed li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--lane)}
+.feed li:first-child{border-top:0}
+.feed time{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.empty{color:var(--muted);font-size:14px}
+.record{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.record span{font-size:12.5px;padding:5px 9px;border-radius:99px;background:var(--pool);color:var(--muted)}
+.record b{color:var(--text);font-weight:650}
+
+/* sensors */
+.slider{display:flex;align-items:center;gap:12px}
+.slider input{flex:1;accent-color:var(--water);height:32px}
+.slider output{font:600 15px var(--mono);min-width:56px;text-align:right}
+.sensor{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 0;border-top:1px solid var(--lane);align-items:center}
+.sensor:first-of-type{border-top:0}
+.sensor .name{font-weight:650}
+.sensor .tag{font-size:12px;padding:2px 7px;border-radius:99px;margin-left:6px;background:var(--pool);color:var(--muted);font-weight:500}
+.sensor .tag.warn{background:#fff1d6;color:#8a5a00}
+.sensor .read{grid-column:1;font:13px var(--mono);color:var(--muted)}
+.sensor .read b{color:var(--text);font-weight:600}
+.sensor .btn{grid-row:1 / span 2;grid-column:2;min-height:40px;font-size:14px}
+
+/* tab bar */
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;padding:8px 16px calc(8px + env(safe-area-inset-bottom));
+  background:rgba(255,255,255,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--lane)}
+nav button{flex:1;max-width:244px;min-height:46px;border-radius:14px;font-weight:650;color:var(--muted)}
+nav button[aria-selected=true]{background:var(--deck);color:var(--text)}
+section[hidden]{display:none}
+
+/* cup sheet */
+dialog{border:0;padding:0;margin:auto auto 0;width:100%;max-width:520px;background:#fff;color:var(--text);border-radius:24px 24px 0 0;box-shadow:0 -8px 30px rgba(11,34,48,.15)}
+dialog::backdrop{background:rgba(11,34,48,.35)}
+.sheet{padding:20px 16px calc(20px + env(safe-area-inset-bottom))}
+.sheet h3{font:800 22px/1.1 var(--round)}
+.sheet .state{color:var(--muted);margin:4px 0 14px}
+.big{font:600 34px/1 var(--mono);font-variant-numeric:tabular-nums}
+.sub{display:flex;gap:16px;margin:8px 0 18px;font:13.5px var(--mono);color:var(--muted)}
+.sub b{color:var(--text);font-weight:600}
+.actions{display:grid;gap:10px}
+.step{background:var(--deck);border-radius:16px;padding:14px;margin-bottom:10px}
+.step p{font-size:14.5px;margin-bottom:10px}
+.step input{width:100%;min-height:48px;border-radius:12px;border:1px solid var(--lane);background:#fff;color:var(--text);font:600 18px var(--mono);padding:0 12px;margin-bottom:10px}
+.step .btn{width:100%}
+.step.done{opacity:.55}
+
+.toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;transition:.25s;
+  background:var(--text);color:var(--pool);padding:10px 16px;border-radius:14px;font-weight:650;font-size:14.5px;max-width:calc(100% - 32px);pointer-events:none;z-index:9}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Splash<span>Shot</span></div>
+  <div class="conn" id="conn"><i></i><span>Connecting</span></div>
+</header>
+<div class="banner" id="banner">Can't reach the tray. Join the Wi-Fi network <b>SplashShot</b>, then reopen <b>192.168.4.1</b>.</div>
+
+<section id="tab-game">
+  <div class="score" aria-live="polite">
+    <div><small>ROBOT</small><b id="rob">0</b></div>
+    <div class="dash">–</div>
+    <div><small>YOU</small><b id="you">0</b></div>
+  </div>
+  <p class="phase" id="phase">&nbsp;</p>
+
+  <div class="tray" id="tray" aria-label="Cups on the tray">
+    <span class="side">Robot</span>
+    <div class="row" data-cups="1"></div>
+    <div class="row" data-cups="2,3"></div>
+    <div class="row" data-cups="4,5,6"></div>
+    <span class="side">You</span>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" id="start">Start game</button>
+    <button class="btn" id="zero">Zero scales</button>
+    <div class="scored">
+      <button class="btn" id="scored">I scored</button>
+      <button class="btn" id="undo" aria-label="Take back my last point">Undo</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Robot</h2>
+    <div class="label">Difficulty</div>
+    <div class="seg" id="dif"></div>
+    <p class="note" id="difnote"></p>
+    <div class="label">Bar length</div>
+    <div class="seg" id="bar"></div>
+    <div class="robotline"><i></i><span>Robot not linked yet. These settings are saved on the tray and go to the robot when it joins.</span></div>
+  </div>
+
+  <div class="card">
+    <h2>What happened</h2>
+    <ul class="feed" id="feed"></ul>
+  </div>
+
+  <div class="card">
+    <h2>Games</h2>
+    <div class="record" id="record"></div>
+    <ul class="feed" id="hist"></ul>
+  </div>
+</section>
+
+<section id="tab-sensors" hidden>
+  <div class="card">
+    <h2>Hit sensitivity</h2>
+    <div class="slider">
+      <input type="range" id="thr" min="0.5" max="5" step="0.1" value="1.5" aria-label="Grams a cup must gain to count as a hit">
+      <output id="thrv" class="mono">1.5 g</output>
+    </div>
+    <p class="note">A cup counts as hit when it gains more than this and holds it for a second. A ball weighs 2.7 g. Raise it if cups trigger by themselves; lower it if real hits get missed.</p>
+  </div>
+  <div class="card">
+    <h2>Load cells</h2>
+    <div id="sensors"></div>
+    <p class="note">Noise above about 1 g usually means the disc is touching the plate or a wire is loose. Calibrate each cup once; the tray remembers it.</p>
+  </div>
+  <div class="card">
+    <h2>Connection</h2>
+    <p class="note" id="netnote" style="margin-top:0">Wi-Fi <b>SplashShot</b>, password <b>waterpong</b>, then open <b>192.168.4.1</b>.</p>
+  </div>
+</section>
+
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-tab="game">Game</button>
+  <button role="tab" aria-selected="false" data-tab="sensors">Sensors</button>
+</nav>
+
+<dialog id="sheet"><div class="sheet" id="sheetBody"></div></dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const DIFS = [
+  ["Easy", "Aims true on about 20% of shots. Clear misses, short or long."],
+  ["Medium", "Aims true on about 45% of shots. A mix of clear misses and rim-outs."],
+  ["Hard", "Aims true on about 70% of shots. Mostly near misses."],
+  ["Pro", "Aims true on every shot. Only real misses."],
+  ["Adaptive", "Matches your recent hit rate to keep the game close."]
+];
+const BARS = ["Short", "Medium", "Long"];
+const DEMO = new URLSearchParams(location.search).has("demo") || location.protocol === "file:";
+const api = DEMO ? makeDemo() : realApi;
+
+let S = null, fails = 0, busy = false, openCup = 0, calStep = 0;
+const freshUntil = Array(7).fill(0);
+const cups = [];
+
+/* ---------- network ---------- */
+async function realApi(path) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 2500);
+  try {
+    const r = await fetch(path, { method: path.startsWith("/api/cmd") ? "POST" : "GET", cache: "no-store", signal: ctl.signal });
+    return await r.json();
+  } finally { clearTimeout(timer); }
+}
+async function poll() {
+  if (busy) return;
+  busy = true;
+  try { const s = await api("/api/state"); fails = 0; render(s); }
+  catch (e) { if (++fails >= 3) setConn("off"); }
+  finally { busy = false; }
+}
+async function cmd(params) {
+  try {
+    const r = await api("/api/cmd?" + new URLSearchParams(params));
+    if (!r.ok) toast(r.err || "The tray said no");
+    setTimeout(poll, 60);
+    return r;
+  } catch (e) { toast("Can't reach the tray"); return { ok: false }; }
+}
+function setConn(mode) {
+  const c = $("#conn");
+  c.className = "conn " + mode;
+  c.querySelector("span").textContent = { live: "Live", off: "Offline", demo: "Demo" }[mode];
+  $("#banner").classList.toggle("show", mode === "off");
+  document.querySelectorAll("#start,#zero,#scored,#undo").forEach(b => b.disabled = mode === "off");
+}
+
+/* ---------- build the tray ---------- */
+document.querySelectorAll(".row").forEach(row => {
+  row.dataset.cups.split(",").forEach(n => {
+    const b = document.createElement("button");
+    b.className = "cup nosensor";
+    b.innerHTML = Array.from({ length: 8 }, (_, k) => `<i class="led" style="--k:${k}"></i>`).join("") +
+      `<span class="well"><span class="n">${n}</span><span class="g mono"></span></span>`;
+    b.onclick = () => openSheet(+n);
+    cups[+n] = b;
+    row.appendChild(b);
+  });
+});
+DIFS.forEach(([name], i) => addSeg("#dif", name, () => cmd({ c: "dif", v: i })));
+BARS.forEach((name, i) => addSeg("#bar", name, () => cmd({ c: "bar", v: i })));
+function addSeg(sel, label, fn) {
+  const b = document.createElement("button");
+  b.textContent = label; b.setAttribute("aria-pressed", "false"); b.onclick = fn;
+  $(sel).appendChild(b);
+}
+
+/* ---------- render ---------- */
+const g = cg => (cg / 100).toFixed(2);
+const sg = cg => (cg >= 0 ? "+" : "−") + Math.abs(cg / 100).toFixed(2);
+const clock = s => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+function ago(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return s < 5 ? "just now" : s < 60 ? s + " s ago" : s < 3600 ? Math.round(s / 60) + " min ago" : Math.round(s / 3600) + " h ago";
+}
+function cupState(sp) {
+  if (!sp.p) return "nosensor";
+  if (!sp.z) return "zeroing";
+  if (sp.h) return "hit";
+  if (sp.l) return "lifted";
+  return "standing";
+}
+const STATE_WORDS = { nosensor: "No sensor connected", zeroing: "Zeroing", hit: "Hit", lifted: "Picked up", standing: "Standing" };
+
+function render(s) {
+  const prev = S; S = s;
+  setConn(DEMO ? "demo" : "live");
+  $("#rob").textContent = s.rob;
+  $("#you").textContent = s.you;
+
+  const ph = $("#phase");
+  ph.classList.toggle("won", s.ph === 2);
+  if (s.ph === 2) ph.textContent = s.win === "R" ? `Robot wins ${s.rob}–${s.you}` : `You win ${s.you}–${s.rob}`;
+  else if (s.ph === 1) ph.textContent = `Game on · ${DIFS[s.dif][0]} · ${clock(s.el)} · first to ${s.tgt}`;
+  else ph.textContent = `Ready · first to ${s.tgt} · press Start game`;
+
+  s.spots.forEach((sp, i) => {
+    const n = i + 1, el = cups[n], st = cupState(sp);
+    const wasHit = prev && prev.spots[i].h;
+    if (sp.h && prev && !wasHit) {
+      freshUntil[n] = Date.now() + 2000;
+      el.classList.remove("splash"); void el.offsetWidth; el.classList.add("splash");
+      if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(90);
+      toast(`Cup ${n} hit`);
+    }
+    el.className = "cup " + st + (Date.now() < freshUntil[n] ? " fresh" : "") + (el.classList.contains("splash") ? " splash" : "");
+    el.querySelector(".g").textContent = st === "hit" ? sg(sp.hg) + " g" : st === "standing" ? sg(sp.d) : st === "lifted" ? "lifted" : "";
+    el.setAttribute("aria-label", `Cup ${n}: ${STATE_WORDS[st]}`);
+  });
+
+  const over = s.ph === 2;
+  $("#start").textContent = s.ph === 0 ? "Start game" : "New game";
+  $("#scored").disabled = over;
+  $("#undo").disabled = over || s.you === 0;
+  document.querySelectorAll("#dif button").forEach((b, i) => b.setAttribute("aria-pressed", i === s.dif));
+  document.querySelectorAll("#bar button").forEach((b, i) => b.setAttribute("aria-pressed", i === s.bar));
+  $("#difnote").textContent = DIFS[s.dif][1];
+
+  $("#feed").innerHTML = s.ev.length
+    ? s.ev.slice().reverse().map(([, t, txt]) => `<li><span>${esc(txt)}</span><time>${ago(s.up - t)}</time></li>`).join("")
+    : `<li class="empty">Nothing yet. Drop a ball in a cup to test it.</li>`;
+
+  const rec = {};
+  s.hist.forEach(([d, , , w]) => { rec[d] = rec[d] || { R: 0, Y: 0 }; rec[d][w]++; });
+  $("#record").innerHTML = Object.keys(rec).map(d => `<span>${DIFS[d][0]}: you <b>${rec[d].Y}</b>, robot <b>${rec[d].R}</b></span>`).join("");
+  $("#hist").innerHTML = s.hist.length
+    ? s.hist.slice().reverse().map(([d, r, y, w, sec]) =>
+        `<li><span>${w === "R" ? `Robot won ${r}–${y}` : `You won ${y}–${r}`}</span><time>${DIFS[d][0]} · ${clock(sec)}</time></li>`).join("")
+    : `<li class="empty">Finished games show up here, with the difficulty they were played on.</li>`;
+
+  const thr = $("#thr");
+  if (document.activeElement !== thr) { thr.value = (s.thr / 100).toFixed(1); $("#thrv").textContent = thr.value + " g"; }
+  renderSensors(s);
+  if ($("#sheet").open) renderSheet();
+}
+function renderSensors(s) {
+  const box = $("#sensors");
+  if (!box.children.length) {
+    box.innerHTML = s.spots.map((_, i) => `<div class="sensor"><div><span class="name">Cup ${i + 1}</span><span class="tag"></span></div>
+      <div class="read"></div><button class="btn" onclick="openSheet(${i + 1}, true)">Calibrate</button></div>`).join("");
+  }
+  s.spots.forEach((sp, i) => {
+    const row = box.children[i], tag = row.querySelector(".tag");
+    tag.textContent = !sp.p ? "not connected" : sp.c ? "calibrated" : "not calibrated";
+    tag.className = "tag" + (sp.p && !sp.c ? " warn" : "");
+    row.querySelector(".read").innerHTML = sp.p
+      ? `<b>${g(sp.g)} g</b> · change ${sg(sp.d)} · noise ${g(sp.n)}`
+      : `Check DT/SCK wiring for HX711 #${i + 1}`;
+    row.querySelector("button").disabled = !sp.p;
+  });
+}
+function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+
+/* ---------- cup sheet ---------- */
+function openSheet(n, calibrate) {
+  openCup = n; calStep = calibrate ? 1 : 0;
+  renderSheet(true);
+  $("#sheet").showModal();
+  document.activeElement.blur();  // don't show a focus ring on the first button for touch users
+}
+function renderSheet(full) {
+  if (!S) return;
+  const sp = S.spots[openCup - 1], st = cupState(sp), body = $("#sheetBody");
+  // Rebuild only when the buttons need to change, so a half-typed weight survives polling.
+  const view = calStep ? `${openCup}:cal${calStep}` : `${openCup}:${st}`;
+  if (full || body.dataset.view !== view) {
+    body.dataset.view = view;
+    body.innerHTML = `<h3>Cup ${openCup}</h3><p class="state" id="sstate"></p>
+      <div class="big" id="sbig"></div><div class="sub" id="ssub"></div>` + (calStep ? calSteps() : cupActions(sp, st));
+  }
+  $("#sstate").textContent = STATE_WORDS[st] + (sp.p && !sp.c ? " · not calibrated" : "");
+  const big = $("#sbig"), sub = $("#ssub");
+  if (big) big.textContent = sp.p ? g(sp.g) + " g" : "—";
+  if (sub) sub.innerHTML = sp.p ? `<span>change <b>${sg(sp.d)}</b></span><span>noise <b>${g(sp.n)}</b></span>` : "";
+}
+function cupActions(sp, st) {
+  if (!sp.p) return `<p class="note">No HX711 answering on this spot. Cup ${openCup} uses DT and SCK pins from the pin map.</p>
+    <div class="actions"><button class="btn" onclick="closeSheet()">Close</button></div>`;
+  return `<div class="actions">
+    ${sp.h ? `<button class="btn" onclick="sheetCmd({c:'hit',s:${openCup},v:0})">Not a hit — put it back</button>`
+           : `<button class="btn primary" onclick="sheetCmd({c:'hit',s:${openCup},v:1})">Count as hit</button>`}
+    <button class="btn" onclick="sheetCmd({c:'zero',s:${openCup}})">Zero this cup</button>
+    <button class="btn" onclick="calStep=1;renderSheet(true)">Calibrate…</button>
+    <button class="btn" onclick="closeSheet()">Close</button></div>`;
+}
+function calSteps() {
+  const s = n => calStep > n ? " done" : "";
+  return `<div class="step${s(1)}"><p><b>1.</b> Take everything off spot ${openCup} so it's empty.</p>
+      <button class="btn wide" ${calStep !== 1 ? "disabled" : ""} onclick="calZero()">Zero the empty spot</button></div>
+    <div class="step${s(2)}"><p><b>2.</b> Put something of known weight on it: a 100 g weight, or a cup of water you weighed on a kitchen scale.</p>
+      <input id="calg" type="number" inputmode="decimal" min="5" step="0.1" placeholder="Weight in grams" ${calStep !== 2 ? "disabled" : ""}>
+      <button class="btn primary" style="width:100%" ${calStep !== 2 ? "disabled" : ""} onclick="calSave()">Save calibration</button></div>
+    ${calStep === 3 ? `<div class="step"><p><b>Done.</b> Put the cup back on, then tap Zero scales before you play.</p>
+      <button class="btn wide primary" style="width:100%" onclick="closeSheet()">Finish</button></div>`
+      : `<div class="actions"><button class="btn" onclick="closeSheet()">Cancel</button></div>`}`;
+}
+async function calZero() { const r = await cmd({ c: "zero", s: openCup }); if (r.ok) { calStep = 2; renderSheet(true); } }
+async function calSave() {
+  const grams = parseFloat($("#calg").value);
+  if (!(grams >= 5)) { toast("Enter the weight in grams (5 g or more)"); return; }
+  const r = await cmd({ c: "cal", s: openCup, v: Math.round(grams * 100) });
+  if (r.ok) { calStep = 3; renderSheet(true); toast(`Cup ${openCup} calibrated`); }
+}
+async function sheetCmd(p) { const r = await cmd(p); if (r.ok) closeSheet(); }
+function closeSheet() { $("#sheet").close(); calStep = 0; }
+$("#sheet").addEventListener("click", e => { if (e.target === $("#sheet")) closeSheet(); });
+
+/* ---------- controls ---------- */
+function armed(btn, label, fn) {  // second tap within 3 s confirms
+  if (btn.classList.contains("armed")) { btn.classList.remove("armed"); btn.textContent = btn.dataset.label; fn(); return; }
+  btn.dataset.label = btn.textContent; btn.textContent = label; btn.classList.add("armed");
+  setTimeout(() => { if (btn.classList.contains("armed")) { btn.classList.remove("armed"); btn.textContent = btn.dataset.label; } }, 3000);
+}
+$("#start").onclick = e => S && S.ph === 1 ? armed(e.currentTarget, "Tap again to restart", () => cmd({ c: "start" })) : cmd({ c: "start" });
+$("#zero").onclick = e => S && S.ph === 1 ? armed(e.currentTarget, "Tap again to zero", () => cmd({ c: "tare" })) : cmd({ c: "tare" });
+$("#scored").onclick = () => cmd({ c: "you", v: 1 });
+$("#undo").onclick = () => cmd({ c: "you", v: -1 });
+$("#thr").oninput = e => $("#thrv").textContent = (+e.target.value).toFixed(1) + " g";
+$("#thr").onchange = e => cmd({ c: "thr", v: Math.round(e.target.value * 100) });
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
+  $("#tab-game").hidden = b.dataset.tab !== "game";
+  $("#tab-sensors").hidden = b.dataset.tab !== "sensors";
+  scrollTo(0, 0);
+});
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+if (!DEMO) $("#netnote").innerHTML += ` This page is served by the tray at <b>${esc(location.host)}</b>.`;
+else $("#netnote").textContent = "Demo mode: a pretend tray running in this page. On the real tray, join Wi-Fi SplashShot (password waterpong) and open 192.168.4.1.";
+
+setInterval(poll, 500);  // the R4's Wi-Fi chip handles ~2 requests a second comfortably
+poll();
+
+/* ---------- demo: a pretend tray, so the app works with no hardware (add ?demo to the URL) ---------- */
+function makeDemo() {
+  const t0 = Date.now() - 60000, now = () => Date.now() - t0;
+  const AIM = [0.2, 0.45, 0.7, 1, 0.5];
+  const st = { ph: 0, win: "", dif: 1, bar: 0, thr: 150, you: 0, start: 0, end: 0, ev: [], hist: [] };
+  const spots = Array.from({ length: 6 }, () => ({ p: 1, z: 1, c: 1, h: 0, l: 0, w: 180 + Math.random() * 20, base: 0, hg: 0, due: 0 }));
+  spots.forEach(s => s.base = s.w);
+  let id = 0;
+  const log = t => { st.ev.push([++id, now(), t]); if (st.ev.length > 12) st.ev.shift(); };
+  const robot = () => spots.filter(s => s.h).length;
+  const begin = () => { st.ph = 1; st.win = ""; st.start = now(); };
+  const finish = w => {
+    st.ph = 2; st.win = w; st.end = now();
+    st.hist.push([st.dif, robot(), st.you, w, Math.round((st.end - st.start) / 1000)]); if (st.hist.length > 8) st.hist.shift();
+    log(w === "R" ? `Robot wins ${robot()}-${st.you}` : `You win ${st.you}-${robot()}`);
+  };
+  const check = () => { if (st.ph !== 1) return; if (robot() >= 6) finish("R"); else if (st.you >= 6) finish("Y"); };
+  setInterval(() => {  // the robot shoots every 5 s during a game
+    if (st.ph !== 1) return;
+    const open = spots.filter(s => !s.h && !s.due);
+    if (open.length && Math.random() < AIM[st.dif]) { const s = open[Math.floor(Math.random() * open.length)]; s.w += 2.7; s.due = now() + 1300; }
+  }, 5000);
+  function tick() {
+    spots.forEach((s, i) => {
+      if (s.due && now() >= s.due) {
+        s.due = 0; s.h = 1; s.hg = s.w - s.base; s.base = s.w;
+        if (st.ph === 0) begin();
+        log(`Cup ${i + 1} hit (+${s.hg.toFixed(1)} g)`); check();
+      }
+    });
+  }
+  const noise = () => (Math.random() - 0.5) * 0.5;
+  return async path => {
+    tick();
+    const [p, q] = path.split("?"), a = new URLSearchParams(q || ""), c = a.get("c"), n = +a.get("s") - 1, v = +a.get("v");
+    if (p === "/api/state") {
+      const t = now();
+      return {
+        up: t, ph: st.ph, win: st.win, dif: st.dif, bar: st.bar, thr: st.thr, rob: robot(), you: st.you, tgt: 6,
+        el: st.ph ? Math.round(((st.ph === 2 ? st.end : t) - st.start) / 1000) : 0,
+        spots: spots.map(s => { const x = s.w + noise(); return { p: 1, z: 1, c: 1, h: s.h, l: 0, g: Math.round((x - 180) * 100), d: Math.round((x - s.base) * 100), n: 30 + Math.round(Math.random() * 15), hg: Math.round(s.hg * 100) }; }),
+        ev: st.ev, hist: st.hist, robot: { linked: 0 }
+      };
+    }
+    const ok = { ok: true };
+    if (c === "start") { spots.forEach(s => { s.h = 0; s.hg = 0; s.due = 0; s.base = s.w; }); st.you = 0; begin(); log(`Game on - ${DIFS[st.dif][0]}`); }
+    else if (c === "tare") { spots.forEach(s => s.base = s.w); log("Scales zeroed"); }
+    else if (c === "reset") { spots.forEach(s => { s.h = 0; s.base = s.w; }); st.you = 0; st.ph = 0; log("Game reset"); }
+    else if (c === "you") {
+      if (st.ph === 2) return { ok: false, err: "Game over. Start a new one" };
+      if (v < 0) { if (st.you) { st.you--; log(`You -1 (${st.you})`); } }
+      else { if (st.ph === 0) begin(); st.you++; log(`You scored (${st.you})`); check(); }
+    }
+    else if (c === "hit") {
+      const s = spots[n];
+      if (v && !s.h) { s.h = 1; s.base = s.w; if (st.ph === 0) begin(); log(`Cup ${n + 1} marked hit by hand`); check(); }
+      if (!v && s.h) { s.h = 0; s.hg = 0; s.base = s.w; log(`Cup ${n + 1} hit removed`); if (st.ph === 2 && st.win === "R") { st.ph = 1; st.win = ""; st.hist.pop(); } }
+    }
+    else if (c === "dif") { st.dif = v; log(`Difficulty: ${DIFS[v][0]}`); }
+    else if (c === "bar") { st.bar = v; log(`Bar length: ${BARS[v]}`); }
+    else if (c === "thr") st.thr = v;
+    else if (c === "zero") { spots[n].base = spots[n].w; log(`Cup ${n + 1} zeroed`); }
+    else if (c === "cal") log(`Cup ${n + 1} calibrated`);
+    return ok;
+  };
+}
+</script>
+</body>
+</html>

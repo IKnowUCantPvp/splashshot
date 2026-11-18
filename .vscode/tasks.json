@@ -1,0 +1,50 @@
+{
+  // Cmd+Shift+B runs "Deploy to tray". The rest are under Terminal > Run Task.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Deploy to tray",
+      "detail": "Bake the app in, compile, upload to the R4 over USB",
+      "type": "shell",
+      "command": "tools/deploy.sh",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Serial monitor",
+      "detail": "Watch the tray's weights and events over USB (Ctrl+C to stop)",
+      "type": "shell",
+      "command": "tools/monitor.sh",
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Compile only",
+      "detail": "Check the firmware builds, no board needed",
+      "type": "shell",
+      "command": "python3 tools/embed_web.py && arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi --build-path build/fw tray",
+      "options": { "env": { "PATH": "/opt/homebrew/bin:/usr/local/bin:${env:PATH}" } },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "Run tests",
+      "detail": "Hit-detection and game logic tests on the laptop",
+      "type": "shell",
+      "command": "mkdir -p build && c++ -std=c++17 -I tray tests/test_tray.cpp -o build/test_tray && build/test_tray",
+      "group": { "kind": "test", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "Pretend tray (no hardware)",
+      "detail": "Serve the app against the real game code at http://localhost:8765",
+      "type": "shell",
+      "command": "python3 tools/sim_server.py",
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    }
+  ]
+}

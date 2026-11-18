@@ -1,0 +1,5 @@
+{
+  "files.associations": { "*.ino": "cpp" },
+  "search.exclude": { "build": true, "tray/webapp.h": true },
+  "files.readonlyInclude": { "tray/webapp.h": true }
+}
