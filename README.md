@@ -18,6 +18,19 @@ cup and tuning hit sensitivity.
 
 ---
 
+## Get the code
+
+```bash
+git clone https://github.com/IKnowUCantPvp/splashshot.git
+```
+
+First time on a computer:
+- **Mac:** `brew install arduino-cli`, then `arduino-cli core install arduino:renesas_uno`.
+  On an Apple Silicon Mac also run `softwareupdate --install-rosetta --agree-to-license`.
+- **Windows:** use the Arduino IDE. Install the "Arduino UNO R4 Boards" package from the Boards
+  Manager, open `tray/tray.ino`, pick *Arduino UNO R4 WiFi* and click Upload. The `.sh`
+  scripts below are for Mac and Linux.
+
 ## Deploying from VS Code
 
 Open this folder in VS Code, plug the tray's R4 into your Mac over USB, and press
